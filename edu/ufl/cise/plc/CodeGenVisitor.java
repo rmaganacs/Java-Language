@@ -3,7 +3,10 @@ package edu.ufl.cise.plc;
 import edu.ufl.cise.plc.ast.*;
 import edu.ufl.cise.plc.runtime.PLCRuntimeException;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 public class CodeGenVisitor implements ASTVisitor {
 
@@ -100,6 +103,7 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitColorExpr(ColorExpr colorExpr, Object arg) throws Exception {
+        imports.add("import edu.ufl.cise.plc.runtime.ColorTuple;");
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         sb.append("new ColorTuple(");
         colorExpr.getRed().visit(this, sb);
@@ -136,18 +140,23 @@ public class CodeGenVisitor implements ASTVisitor {
         String operator = binaryExpr.getOp().getKind().name();
         String left = binaryExpr.getLeft().getText();
         String right = binaryExpr.getRight().getText();
+        String type = binaryExpr.getLeft().getType().toString();
         if(binaryExpr.getLeft().getType() == Types.Type.IMAGE) {
             imports.add("import edu.ufl.cise.plc.runtime.ImageOps;");
             if(binaryExpr.getRight().getType() == Types.Type.IMAGE){
-                sb.append("ImageOps.binaryImageImageOp(").append(operator).comma().space();
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.").append(operator).comma().space();
                 sb.append(left).comma().space().append(right).rparen();
             }else if(binaryExpr.getRight().getType() == Types.Type.INT){
-                sb.append("ImageOps.binaryImageScalarOp(").append(operator).comma().space();
+                sb.append("ImageOps.binaryImageScalarOp(ImageOps.OP.").append(operator).comma().space();
                 sb.append(left).comma().space().append(right).rparen();
             }
-        }
-        else {
-
+        }else if(binaryExpr.getLeft().getType() == Types.Type.COLOR) {
+            imports.add("import edu.ufl.cise.plc.runtime.ImageOps;");
+            if(binaryExpr.getRight().getType() == Types.Type.COLOR){
+                sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
+                sb.append(left).comma().space().append(right).rparen();
+            }
+        }else {
             sb.lparen();
             if((binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING){
 
@@ -297,6 +306,8 @@ public class CodeGenVisitor implements ASTVisitor {
             sb1.append("public static ").append("String").append(" apply");
         }else if(program.getReturnType() == Types.Type.IMAGE) {
             sb1.append("public static BufferedImage apply");
+        }else if(program.getReturnType() == Types.Type.COLOR) {
+            sb1.append("public static ColorTuple apply");
         }else {
             sb1.append("public static ").append(program.getReturnType().name().toLowerCase(Locale.ROOT)).append(" apply");
         }
@@ -331,6 +342,8 @@ public class CodeGenVisitor implements ASTVisitor {
             sb.append("String");
         }else if(nameDef.getType() == Types.Type.IMAGE){
             sb.append("BufferedImage");
+        }else if(nameDef.getType() == Types.Type.COLOR){
+            sb.append("ColorTuple");
         }else{
             sb.append(nameDef.getType().name().toLowerCase(Locale.ROOT));
         }
@@ -415,7 +428,13 @@ public class CodeGenVisitor implements ASTVisitor {
     public Object visitUnaryExprPostfix(UnaryExprPostfix unaryExprPostfix, Object arg) throws Exception {
         //TODO
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        sb.append("ColorTuple.unpack(");
+        String exprName = unaryExprPostfix.getExpr().getText();
+        String x = unaryExprPostfix.getSelector().getX().getText();
+        String y = unaryExprPostfix.getSelector().getY().getText();
+        //left.getRGB(x, y)
+        sb.append("ColorTuple.unpack(").append(exprName).append(".getRGB(");
+        sb.append(x).comma().space();
+        sb.append(y).rparen().rparen();
         return sb;
     }
 }
