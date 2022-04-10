@@ -97,6 +97,7 @@ public class CodeGenVisitor implements ASTVisitor {
                 type = "\"BOOLEAN\", \"Enter boolean:\"";
             }
         }
+        //TODO COLOR INPUT
         sb.append("ConsoleIO.readValueFromConsole(").append(type).rparen();
         return sb;
     }
@@ -130,6 +131,7 @@ public class CodeGenVisitor implements ASTVisitor {
         }
         unaryExpression.getExpr().visit(this, sb);
         sb.space().rparen();
+        //TODO
         return sb;
     }
 
@@ -138,10 +140,10 @@ public class CodeGenVisitor implements ASTVisitor {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         IToken.Kind op = binaryExpr.getOp().getKind();
         String operator = binaryExpr.getOp().getKind().name();
-        String left = binaryExpr.getLeft().getText();
-        String right = binaryExpr.getRight().getText();
         String type = binaryExpr.getLeft().getType().toString();
         if(binaryExpr.getLeft().getType() == Types.Type.IMAGE) {
+            String left = binaryExpr.getLeft().getText();
+            String right = binaryExpr.getRight().getText();
             imports.add("import edu.ufl.cise.plc.runtime.ImageOps;");
             if(binaryExpr.getRight().getType() == Types.Type.IMAGE){
                 sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.").append(operator).comma().space();
@@ -152,10 +154,14 @@ public class CodeGenVisitor implements ASTVisitor {
             }
         }else if(binaryExpr.getLeft().getType() == Types.Type.COLOR) {
             imports.add("import edu.ufl.cise.plc.runtime.ImageOps;");
+            String left = binaryExpr.getLeft().getText();
+            String right = binaryExpr.getRight().getText();
             if(binaryExpr.getRight().getType() == Types.Type.COLOR){
                 sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
                 sb.append(left).comma().space().append(right).rparen();
             }
+            //TODO COLORFLOAT
+            //TODO LAST CONDITION IN BINARY
         }else {
             sb.lparen();
             if((binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING){
@@ -233,7 +239,7 @@ public class CodeGenVisitor implements ASTVisitor {
             if(assignmentStatement.getExpr().getType() == Types.Type.IMAGE) {
                 sb.append("ImageOps.resize(").append(exprName);
                 sb.space().append(x).comma().space().append(y).rparen();
-            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.COLOR || assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
+            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.COLOR){
                 //TODO If <expr>.coerceTo is int, the int is used as a single color component in a ColorTuple where all three color components have the value of the int.  (The value is truncated, so values outside of [0, 256) will be either white or black.)
                 imports.add("import edu.ufl.cise.plc.runtime.ColorTuple;");
                 imports.add("import edu.ufl.cise.plc.runtime.ColorTupleFloat;");
@@ -242,8 +248,12 @@ public class CodeGenVisitor implements ASTVisitor {
                 sb.append("ImageOps.setColor(").append(name).comma().append(" x, y, ");
                 assignmentStatement.getExpr().visit(this, sb);
                 sb.rparen();
+            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
+
             }
         }else if(assignmentStatement.getSelector() == null && assignmentStatement.getExpr().getType() == Types.Type.IMAGE){
+            //TODO
+            sb.append("ImageOps.resize(").append(exprName);
             sb.append("ImageOps.clone(").append(exprName).rparen();
         }else{
             sb.append(name);
@@ -287,7 +297,7 @@ public class CodeGenVisitor implements ASTVisitor {
             expr.visit(this, sb);
             sb.semi().newline();
         }
-
+        //TODO
         return sb;
     }
 
