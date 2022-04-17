@@ -1,12 +1,8 @@
 package edu.ufl.cise.plc;
 
 import edu.ufl.cise.plc.ast.*;
-import edu.ufl.cise.plc.runtime.PLCRuntimeException;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 public class CodeGenVisitor implements ASTVisitor {
 
@@ -96,8 +92,11 @@ public class CodeGenVisitor implements ASTVisitor {
                 sb.append("(Boolean)").space();
                 type = "\"BOOLEAN\", \"Enter boolean:\"";
             }
+            case "color" -> {
+                sb.append("(ColorTuple)").space();
+                type = "\"COLOR\", \"\"Enter red, green, and blue components separated with space:\"";
+            }
         }
-        //TODO COLOR INPUT
         sb.append("ConsoleIO.readValueFromConsole(").append(type).rparen();
         return sb;
     }
@@ -124,14 +123,38 @@ public class CodeGenVisitor implements ASTVisitor {
         if(unaryExpression.getOp().getKind() == IToken.Kind.MINUS)
         {
             sb.append("-").space();
+            unaryExpression.getExpr().visit(this, sb);
+            sb.space().rparen();
         }
         else if(unaryExpression.getOp().getKind() == IToken.Kind.BANG)
         {
             sb.append("!").space();
+            unaryExpression.getExpr().visit(this, sb);
+            sb.space().rparen();
+        }else if(unaryExpression.getOp().getKind() == IToken.Kind.COLOR_OP)
+        {
+            String value = unaryExpression.getExpr().getText();
+            String colorMethod = unaryExpression.getOp().getText();
+            if(unaryExpression.getExpr().getType() == Types.Type.INT){
+                sb.append("ColorTuple.unpack(").append(value).rparen();
+            }else if(unaryExpression.getExpr().getType() == Types.Type.COLOR){
+                if(Objects.equals(colorMethod, "getRed")){
+                    sb.append("ColorTuple.getRed(").append(value).rparen();
+                }else if(Objects.equals(colorMethod, "getGreen")){
+                    sb.append("ColorTuple.getGreen(").append(value).rparen();
+                }else if(Objects.equals(colorMethod, "getBlue")){
+                    sb.append("ColorTuple.getBlue(").append(value).rparen();
+                }
+            }else if(unaryExpression.getExpr().getType() == Types.Type.IMAGE){
+                if(Objects.equals(colorMethod, "getRed")){
+                    sb.append("ImageOps.extractRed(").append(value).rparen();
+                }else if(Objects.equals(colorMethod, "getGreen")){
+                    sb.append("ImageOps.extractGreen(").append(value).rparen();
+                }else if(Objects.equals(colorMethod, "getBlue")){
+                    sb.append("ImageOps.extractBlue(").append(value).rparen();
+                }
+            }
         }
-        unaryExpression.getExpr().visit(this, sb);
-        sb.space().rparen();
-        //TODO
         return sb;
     }
 
@@ -298,16 +321,17 @@ public class CodeGenVisitor implements ASTVisitor {
         String name = readStatement.getName();
         Expr expr = readStatement.getSource();
 
-        if(expr.getType() != Types.Type.CONSOLE) {
-            throw new PLCRuntimeException("Read only implemented for CONSOLE");
+        if(expr.getType() == Types.Type.IMAGE) {
+            imports.add("import edu.ufl.cise.plc.runtime.FileURLIO;");
+            sb.append("FileURLIO.readImage(").append(expr.getText()).rparen();
         }
-        else{
+        else if(expr.getType() == Types.Type.CONSOLE){
             sb.append(name);
             sb.append(" = ");
             expr.visit(this, sb);
             sb.semi().newline();
         }
-        //TODO
+        //TODO ADD MORE TYPES MAYBE IDK WE'LL SEE...
         return sb;
     }
 
@@ -428,11 +452,12 @@ public class CodeGenVisitor implements ASTVisitor {
                 sb.append(" = ");
                 sb.append("FileURLIO.readImage(");
                 declaration.getExpr().visit(this, sb);
+                //HAS DIM
                 if(declaration.getDim() != null){
                     sb.comma().space();
                     declaration.getDim().visit(this, sb);
                     sb.rparen();
-                }else{
+                }else{ // NO DIM
                     sb.rparen();
                 }
             }else{
