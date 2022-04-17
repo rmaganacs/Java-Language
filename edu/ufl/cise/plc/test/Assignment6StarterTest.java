@@ -1,18 +1,5 @@
 package edu.ufl.cise.plc.test;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.Arrays;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-
-import edu.ufl.cise.plc.TypeCheckException;
 import edu.ufl.cise.plc.ast.ASTNode;
 import edu.ufl.cise.plc.ast.Program;
 import edu.ufl.cise.plc.runtime.ColorTuple;
@@ -20,6 +7,16 @@ import edu.ufl.cise.plc.runtime.ConsoleIO;
 import edu.ufl.cise.plc.runtime.FileURLIO;
 import edu.ufl.cise.plc.runtime.ImageOps;
 import edu.ufl.cise.plc.runtime.javaCompilerClassLoader.PLCLangExec;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class Assignment6StarterTest {
 
@@ -155,7 +152,7 @@ class Assignment6StarterTest {
 				      image[width,height] b <- url;
 				      ^b;
 				      """;
-		String url = "https://www.ufl.edu/media/wwwufledu/images/about/aerial_tigert_stadium.jpg";
+		String url = "https://ufl.discovery.academicanalytics.com/assets/ufl/external/academics.jpg";
 		Object[] params = { url, 300, 200 };
 		BufferedImage refImage = showRef(FileURLIO.readImage(url, 300, 200));
 		show(check(input, params, refImage));
@@ -213,7 +210,7 @@ class Assignment6StarterTest {
                 ^b;
 
 				""";
-		String url = "https://www.ufl.edu/media/wwwufledu/images/nav/academics.jpg";
+		String url = "https://ufl.discovery.academicanalytics.com/assets/ufl/external/academics.jpg";
 		BufferedImage inputImage = FileURLIO.readImage(url);
 		int w = inputImage.getWidth();
 		int h = inputImage.getHeight();
