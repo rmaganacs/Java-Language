@@ -255,6 +255,10 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        /*if(pixelSelector.getX() instanceof IdentExpr && pixelSelector.getY() instanceof IdentExpr){
+            sb.append("for(int x = 0; x < ").append(pixelSelector.getText()).append(".getWidth(); x++)").newline();
+            sb.append("for(int y = 0; y < ").append(pixelSelector.getText()).append(".getWidth(); y++)").newline();
+        }*/
         return sb;
     }
 
@@ -264,6 +268,7 @@ public class CodeGenVisitor implements ASTVisitor {
         String name = assignmentStatement.getName();
         String exprName = assignmentStatement.getExpr().getText();
         Expr expr = assignmentStatement.getExpr();
+        //blue[0,0] = 12;
         if(assignmentStatement.getSelector() != null){
             imports.add("import edu.ufl.cise.plc.runtime.ImageOps;");
             String x = assignmentStatement.getSelector().getX().getText();
@@ -278,16 +283,24 @@ public class CodeGenVisitor implements ASTVisitor {
                 sb.append("for(int x = 0; x < ").append(name).append(".getWidth(); x++)").newline();
                 sb.append("for(int y = 0; y < ").append(name).append(".getWidth(); y++)").newline();
                 sb.append("ImageOps.setColor(").append(name).comma().append(" x, y, ");
-
                 assignmentStatement.getExpr().visit(this, sb);
                 sb.rparen();
             }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
 
             }
-        }else if(assignmentStatement.getSelector() == null && assignmentStatement.getExpr().getType() == Types.Type.IMAGE){
+        }else if(assignmentStatement.getSelector() == null){
             //TODO
-            sb.append("ImageOps.resize(").append(exprName);
-            sb.append("ImageOps.clone(").append(exprName).rparen();
+            if(assignmentStatement.getExpr() instanceof IdentExpr){
+                sb.append("ImageOps.clone(").append(exprName).rparen();
+            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.COLOR){
+                sb.append("for(int x = 0; x < ").append(exprName).append(".getWidth(); x++)").newline();
+                sb.append("for(int y = 0; y < ").append(exprName).append(".getWidth(); y++)").newline();
+                sb.append("ImageOps.setColor(").append(exprName).comma().append(" x, y, ");
+                assignmentStatement.getExpr().visit(this, sb);
+                sb.rparen();
+            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
+
+            }
         }else{
             sb.append(name);
             sb.append(" = ");
@@ -307,6 +320,15 @@ public class CodeGenVisitor implements ASTVisitor {
         if(writeStatement.getSource().getType() == Types.Type.IMAGE && writeStatement.getDest().getType() == Types.Type.CONSOLE){
             imports.add("import edu.ufl.cise.plc.runtime.ConsoleIO;");
             sb.append("ConsoleIO.displayImageOnScreen(").append(sourceName);
+        }else if(writeStatement.getDest().getType() == Types.Type.STRING){
+            String fileName = writeStatement.getDest().getText();
+            imports.add("import edu.ufl.cise.plc.runtime.ConsoleIO;");
+            imports.add("import edu.ufl.cise.plc.runtime.FileURLIO;");
+            if(writeStatement.getSource().getType() == Types.Type.IMAGE){
+                sb.append("FileURLIO.writeImage(").append(sourceName).comma().space().append(fileName);
+            }else{
+                sb.append("FileURLIO.writeValue(").append(sourceName).comma().space().append(fileName);
+            }
         }else{
             sb.append("ConsoleIO.console.println(");
             writeStatement.getSource().visit(this, sb);
@@ -477,7 +499,6 @@ public class CodeGenVisitor implements ASTVisitor {
         String exprName = unaryExprPostfix.getExpr().getText();
         String x = unaryExprPostfix.getSelector().getX().getText();
         String y = unaryExprPostfix.getSelector().getY().getText();
-        //left.getRGB(x, y)
         sb.append(exprName).append(".getRGB(");
         sb.append(x).comma().space();
         sb.append(y).rparen();
