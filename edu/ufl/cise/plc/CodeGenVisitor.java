@@ -180,7 +180,11 @@ public class CodeGenVisitor implements ASTVisitor {
             String left = binaryExpr.getLeft().getText();
             String right = binaryExpr.getRight().getText();
             if(binaryExpr.getRight().getType() == Types.Type.COLOR){
-                sb.append("ImageOps.binaryTupleOp(ImageOps.BoolOP.").append(operator).comma().space();
+                if(operator == "EQUALS" || operator == "NOT_EQUALS"){
+                    sb.append("ImageOps.binaryTupleOp(ImageOps.BoolOP.").append(operator).comma().space();
+                }else{
+                    sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
+                }
                 sb.append(left).comma().space().append(right).rparen();
             }else if(binaryExpr.getRight().getType() == Types.Type.COLORFLOAT){
                 sb.append("ImageOps.binaryTupleOp(ImageOps.BoolOP.").append(operator).comma().space();
