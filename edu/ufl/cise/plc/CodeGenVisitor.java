@@ -259,10 +259,9 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        /*if(pixelSelector.getX() instanceof IdentExpr && pixelSelector.getY() instanceof IdentExpr){
-            sb.append("for(int x = 0; x < ").append(pixelSelector.getText()).append(".getWidth(); x++)").newline();
-            sb.append("for(int y = 0; y < ").append(pixelSelector.getText()).append(".getWidth(); y++)").newline();
-        }*/
+        if(pixelSelector.getX() instanceof IntLitExpr && pixelSelector.getY() instanceof IntLitExpr){
+            sb.append(pixelSelector.getX().getText()).comma().space().append(pixelSelector.getY().getText());
+        }
         return sb;
     }
 
@@ -346,7 +345,12 @@ public class CodeGenVisitor implements ASTVisitor {
 
         if(expr.getType() == Types.Type.IMAGE) {
             imports.add("import edu.ufl.cise.plc.runtime.FileURLIO;");
-            sb.append("FileURLIO.readImage(").append(expr.getText()).rparen();
+            sb.append("FileURLIO.readImage(");
+            readStatement.getSource().visit(this, sb);
+            sb.comma().space();
+            readStatement.getSelector().visit(this, sb);
+            sb.rparen().semi().newline();
+            //TODO maybe add closFiles()
         }
         else if(expr.getType() == Types.Type.CONSOLE){
             sb.append(name);
