@@ -264,6 +264,23 @@ class Assignment6StarterTest {
 		refImage.setRGB(0, 0, w,h, rgbArray, 0, w);
 		show(check(input, refImage));
 	}
+	@Test
+	void colorBool() throws Exception {
+		String input = """
+				boolean f()
+				color a = <<50,60,70>>;
+				color b = <<13,14,15>>;
+				^ a == b;
+				""";
+		check(input, false);
+		String input2 = """
+				boolean f()
+				color a = <<50,60,70>>;
+				color b = <<13,14,15>>;
+				^ a != b;
+				""";
+		check(input2, true);
+	}
 
 
 

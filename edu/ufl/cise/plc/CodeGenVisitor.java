@@ -180,10 +180,10 @@ public class CodeGenVisitor implements ASTVisitor {
             String left = binaryExpr.getLeft().getText();
             String right = binaryExpr.getRight().getText();
             if(binaryExpr.getRight().getType() == Types.Type.COLOR){
-                sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
+                sb.append("ImageOps.binaryTupleOp(ImageOps.BoolOP.").append(operator).comma().space();
                 sb.append(left).comma().space().append(right).rparen();
             }else if(binaryExpr.getRight().getType() == Types.Type.COLORFLOAT){
-                sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
+                sb.append("ImageOps.binaryTupleOp(ImageOps.BoolOP.").append(operator).comma().space();
                 sb.append(left).comma().space().append(right).rparen();
             }
             //TODO LAST CONDITION IN BINARY
@@ -268,16 +268,21 @@ public class CodeGenVisitor implements ASTVisitor {
         String name = assignmentStatement.getName();
         String exprName = assignmentStatement.getExpr().getText();
         Expr expr = assignmentStatement.getExpr();
-        //blue[0,0] = 12;
-        if(assignmentStatement.getSelector() != null){
+
+        if(assignmentStatement.getTargetDec().getType() == Types.Type.IMAGE){
             imports.add("import edu.ufl.cise.plc.runtime.ImageOps;");
-            String x = assignmentStatement.getSelector().getX().getText();
-            String y = assignmentStatement.getSelector().getY().getText();
-            if(assignmentStatement.getExpr().getType() == Types.Type.IMAGE) {
-                sb.append("ImageOps.resize(").append(exprName);
-                sb.space().append(x).comma().space().append(y).rparen();
+            if(assignmentStatement.getExpr().getType() == Types.Type.IMAGE){
+                if(assignmentStatement.getSelector() != null){
+                    String x = assignmentStatement.getSelector().getX().getText();
+                    String y = assignmentStatement.getSelector().getY().getText();
+                    sb.append("ImageOps.resize(").append(exprName);
+                    sb.space().append(x).comma().space().append(y).rparen();
+                }else if(assignmentStatement.getSelector() == null){
+                    if(assignmentStatement.getExpr() instanceof IdentExpr){
+                        sb.append("ImageOps.clone(").append(exprName).rparen();
+                    }
+                }
             }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.COLOR){
-                //TODO If <expr>.coerceTo is int, the int is used as a single color component in a ColorTuple where all three color components have the value of the int.  (The value is truncated, so values outside of [0, 256) will be either white or black.)
                 imports.add("import edu.ufl.cise.plc.runtime.ColorTuple;");
                 imports.add("import edu.ufl.cise.plc.runtime.ColorTupleFloat;");
                 sb.append("for(int x = 0; x < ").append(name).append(".getWidth(); x++)").newline();
@@ -286,22 +291,14 @@ public class CodeGenVisitor implements ASTVisitor {
                 assignmentStatement.getExpr().visit(this, sb);
                 sb.rparen();
             }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
-
+                //TODO If <expr>.coerceTo is int, the int is used as a single
+                //color component in a ColorTuple where all three color
+                //components have the value of the int. (The value is
+                //truncated, so values outside of [0, 256) will be either
+                //white or black.)
             }
-        }else if(assignmentStatement.getSelector() == null){
-            //TODO
-            if(assignmentStatement.getExpr() instanceof IdentExpr){
-                sb.append("ImageOps.clone(").append(exprName).rparen();
-            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.COLOR){
-                sb.append("for(int x = 0; x < ").append(exprName).append(".getWidth(); x++)").newline();
-                sb.append("for(int y = 0; y < ").append(exprName).append(".getWidth(); y++)").newline();
-                sb.append("ImageOps.setColor(").append(exprName).comma().append(" x, y, ");
-                assignmentStatement.getExpr().visit(this, sb);
-                sb.rparen();
-            }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
-
-            }
-        }else{
+        }
+        else{
             sb.append(name);
             sb.append(" = ");
             GenTypeConversion(assignmentStatement.getExpr().getType(), assignmentStatement.getExpr().getCoerceTo(), sb);
