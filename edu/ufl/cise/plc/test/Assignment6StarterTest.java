@@ -293,6 +293,6 @@ class Assignment6StarterTest {
 		check(input2, true);
 	}
 
-	
+
 
 }

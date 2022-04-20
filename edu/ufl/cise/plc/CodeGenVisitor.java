@@ -289,7 +289,7 @@ public class CodeGenVisitor implements ASTVisitor {
                 imports.add("import edu.ufl.cise.plc.runtime.ColorTuple;");
                 imports.add("import edu.ufl.cise.plc.runtime.ColorTupleFloat;");
                 sb.append("for(int x = 0; x < ").append(name).append(".getWidth(); x++)").newline();
-                sb.append("for(int y = 0; y < ").append(name).append(".getWidth(); y++)").newline();
+                sb.append("for(int y = 0; y < ").append(name).append(".getHeight(); y++)").newline();
                 sb.append("ImageOps.setColor(").append(name).comma().append(" x, y, ");
                 if(expr.getType() == Types.Type.INT){
                     sb.append(exprName);
