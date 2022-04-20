@@ -291,14 +291,14 @@ public class CodeGenVisitor implements ASTVisitor {
                 sb.append("for(int x = 0; x < ").append(name).append(".getWidth(); x++)").newline();
                 sb.append("for(int y = 0; y < ").append(name).append(".getWidth(); y++)").newline();
                 sb.append("ImageOps.setColor(").append(name).comma().append(" x, y, ");
-                assignmentStatement.getExpr().visit(this, sb);
+                if(expr.getType() == Types.Type.INT){
+                    sb.append(exprName);
+                }else{
+                    assignmentStatement.getExpr().visit(this, sb);
+                }
                 sb.rparen();
             }else if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.INT){
-                //TODO If <expr>.coerceTo is int, the int is used as a single
-                //color component in a ColorTuple where all three color
-                //components have the value of the int. (The value is
-                //truncated, so values outside of [0, 256) will be either
-                //white or black.)
+                sb.append("new ColorTuple(").append(exprName).rparen();
             }
         }
         else{
@@ -346,9 +346,13 @@ public class CodeGenVisitor implements ASTVisitor {
         if(expr.getType() == Types.Type.IMAGE) {
             imports.add("import edu.ufl.cise.plc.runtime.FileURLIO;");
             sb.append("FileURLIO.readImage(");
-            readStatement.getSource().visit(this, sb);
-            sb.comma().space();
-            readStatement.getSelector().visit(this, sb);
+            if(readStatement.getSelector() != null){
+                readStatement.getSource().visit(this, sb);
+                sb.comma().space();
+                readStatement.getSelector().visit(this, sb);
+            }else if(readStatement.getSelector() == null){
+                readStatement.getSource().visit(this, sb);
+            }
             sb.rparen().semi().newline();
             //TODO maybe add closFiles()
         }
@@ -466,11 +470,25 @@ public class CodeGenVisitor implements ASTVisitor {
         }else if(declaration.getOp().getKind() == IToken.Kind.ASSIGN){
             if(declaration.getNameDef().getType() == Types.Type.IMAGE){
                 imports.add("import java.awt.image.BufferedImage;");
+                declaration.getNameDef().visit(this, sb);
+                sb.append(" = ");
+                GenTypeConversion(declaration.getExpr().getType(), declaration.getExpr().getCoerceTo(), sb);
+                declaration.getExpr().visit(this, sb);
+            }else if(declaration.getNameDef().getType() == Types.Type.COLOR){
+                imports.add("import edu.ufl.cise.plc.runtime.ColorTuple;");
+                declaration.getNameDef().visit(this, sb);
+                sb.append(" = ");
+                if(declaration.getExpr().getType() == Types.Type.INT){
+                    sb.append("new ColorTuple(").append(declaration.getExpr().getText()).rparen();
+                }else{
+                    declaration.getExpr().visit(this, sb);
+                }
+            }else{
+                declaration.getNameDef().visit(this, sb);
+                sb.append(" = ");
+                GenTypeConversion(declaration.getExpr().getType(), declaration.getExpr().getCoerceTo(), sb);
+                declaration.getExpr().visit(this, sb);
             }
-            declaration.getNameDef().visit(this, sb);
-            sb.append(" = ");
-            GenTypeConversion(declaration.getExpr().getType(), declaration.getExpr().getCoerceTo(), sb);
-            declaration.getExpr().visit(this, sb);
         }else if(declaration.getOp().getKind() == IToken.Kind.LARROW){
             if(declaration.getNameDef().getType() == Types.Type.IMAGE){
                 imports.add("import java.awt.image.BufferedImage;");

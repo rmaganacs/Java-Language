@@ -242,6 +242,17 @@ class Assignment6StarterTest {
 	}
 
 	@Test
+	void colorArithmetic1() throws Exception {
+		String input = """
+				color f()
+				color a = 10;
+				color b = <<13,14,15>>;
+				^ a+b;
+				""";
+		check(input, new edu.ufl.cise.plc.runtime.ColorTuple(10 + 13, 10 + 14, 10 + 15));
+	}
+
+	@Test
 	void imageArithemtic0() throws Exception {
 		String input = """
 				image testImageArithemtic0()
@@ -282,6 +293,6 @@ class Assignment6StarterTest {
 		check(input2, true);
 	}
 
-
+	
 
 }
