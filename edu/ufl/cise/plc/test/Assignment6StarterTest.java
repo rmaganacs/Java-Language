@@ -2,16 +2,14 @@ package edu.ufl.cise.plc.test;
 
 import edu.ufl.cise.plc.ast.ASTNode;
 import edu.ufl.cise.plc.ast.Program;
-import edu.ufl.cise.plc.runtime.ColorTuple;
-import edu.ufl.cise.plc.runtime.ConsoleIO;
-import edu.ufl.cise.plc.runtime.FileURLIO;
-import edu.ufl.cise.plc.runtime.ImageOps;
+import edu.ufl.cise.plc.runtime.*;
 import edu.ufl.cise.plc.runtime.javaCompilerClassLoader.PLCLangExec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -291,6 +289,257 @@ class Assignment6StarterTest {
 				^ a != b;
 				""";
 		check(input2, true);
+	}
+
+	//Possibly fixed, verify first
+	@Test
+	void testAssigningOneValueToImage() throws Exception{
+		String input = """
+        image f()
+              image[500, 500] b;
+              b = 100;
+              ^b;
+        """;
+		int w = 500;
+		int h = 500;
+		int size = w*h;
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		int[] rgbArray = new int[size];
+		Color hundred = new Color(100, 100, 100);
+		Arrays.fill(rgbArray, hundred.getRGB());
+		refImage.setRGB(0, 0, w,h, rgbArray, 0, w);
+		show(check(input, refImage));
+	}
+
+	@Test
+	void testAssigningOneColorToImage() throws Exception{
+		String input = """
+        image f()
+              image[500, 500] b;
+              b = BLUE;
+              ^b;
+        """;
+		int w = 500;
+		int h = 500;
+		int size = w*h;
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		int blue = Color.BLUE.getRGB();
+		int[] rgbArray = new int[size];
+		Arrays.fill(rgbArray, blue);
+		refImage.setRGB(0, 0, w,h, rgbArray, 0, w);
+		ConsoleIO.displayReferenceImageOnScreen(refImage);
+		show(check(input, refImage));
+	}
+
+	@Test
+	void testAssignImageToImageWithDimension() throws Exception {
+		String input = """
+				image f()
+				      image[500, 500] b;
+				      b = BLUE;
+				      image[200, 200] c;
+				      c = b;
+				      ^c;
+				""";
+		int w = 200;
+		int h = 200;
+		int size = w * h;
+		BufferedImage refImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		int blue = Color.BLUE.getRGB();
+		//int blue = ColorTuple.toColorTuple(Color.BLUE).pack(); //if above one doesn't work
+		int[] rgbArray = new int[size];
+		Arrays.fill(rgbArray, blue);
+		refImage.setRGB(0, 0, w, h, rgbArray, 0, w);
+		//ConsoleIO.displayReferenceImageOnScreen(refImage);
+		show(check(input, refImage));
+	}
+
+	@Test
+	void testAssignImageToImageWithoutDimension() throws Exception{
+		String input = """
+        image f(string url)
+              image b <- url;
+              image[300, 300] c = RED;
+              b = c;
+              ^b;
+        """;
+		int w = 300;
+		int h = 300;
+		int size = w*h;
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		int blue = Color.RED.getRGB();
+		//int blue = ColorTuple.toColorTuple(Color.BLUE).pack(); //if above one doesn't work
+		int[] rgbArray = new int[size];
+		Arrays.fill(rgbArray, blue);
+		refImage.setRGB(0, 0, w,h, rgbArray, 0, w);
+		//ConsoleIO.displayReferenceImageOnScreen(refImage);
+		String url = "https://upload.wikimedia.org/wikipedia/commons/9/92/Albert_and_Alberta.jpg";
+		Object[] params = {url};
+		//this image should be the same size, but darker than inputImage
+		show(check(input, params, refImage));
+	}
+
+	@Test
+	void testColorExpressions() throws Exception {
+		String input = """
+        image a(int width, int height)
+              image[width, height] f;
+              float x = width;
+              float y = height;
+              f[g,h] = <<(g/x*255), 0.0, (h/y*255)>>;
+              ^f;
+              """;
+		int width = 640;
+		int height = 480;
+		Object[] params = {width, height};
+		BufferedImage refImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				refImage.setRGB(x, y, (new ColorTupleFloat(x/(float)width*255, 0.0f, y/(float)height*255)).pack());
+			}
+		}
+		showRef(refImage);
+		show(check(input, params, refImage));
+	}
+
+
+	// Enter 100 200 100
+	@Test
+	void readColorFromConsole() throws Exception{
+		String input = """
+        image f()
+              image[500, 500] b;
+              color a;
+              a <- console;
+              b = a;
+              ^b;
+        """;
+		int w = 500;
+		int h = 500;
+		int size = w*h;
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		int blue = Color.BLUE.getRGB();
+		//int blue = ColorTuple.toColorTuple(Color.BLUE).pack(); //if above one doesn't work
+		int[] rgbArray = new int[size];
+		Color hundred = new Color(100, 200, 100);
+		Arrays.fill(rgbArray, hundred.getRGB());
+		refImage.setRGB(0, 0, w,h, rgbArray, 0, w);
+		//ConsoleIO.displayReferenceImageOnScreen(refImage);
+		show(check(input, refImage));
+	}
+
+
+
+
+
+	@Test
+	void colorArithmetic3() throws Exception {
+		String input = """
+        color f()
+        image[100,100] a;
+        a[x,y] = 10;
+        ^ a[0, 0];
+        """;
+		check(input, new edu.ufl.cise.plc.runtime.ColorTuple(10, 10, 10));
+	}
+
+
+
+	@Test
+	void testExtractRed() throws Exception {
+		String input = """
+     image f(string url)
+              image a <- url;
+              image b = getRed(a); 
+              ^b;
+
+        """;
+		String url = "https://upload.wikimedia.org/wikipedia/commons/9/92/Albert_and_Alberta.jpg";
+		BufferedImage inputImage = FileURLIO.readImage(url);
+		int w = inputImage.getWidth();
+		int h = inputImage.getHeight();
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		for (int x = 0; x < w; x++)
+			for (int y = 0; y < h; y++) {
+				ColorTuple pixel = ColorTuple.unpack(inputImage.getRGB(x, y));
+				int newPackedPixel = (new ColorTuple(pixel.red,0,0)).pack();
+				refImage.setRGB(x, y, newPackedPixel);
+			}
+		Object[] params = {url};
+		show(check(input, params, refImage));
+	}
+
+
+
+
+
+
+
+
+
+	@Test
+	void testGetRGBFromColor() throws Exception {
+		String input = """
+     int f()
+              color a = <<10, 20, 30>>;
+              int r = getRed(a);
+              int g = getBlue(a);
+              int b = getGreen(a);
+              ^r + g + b;
+
+        """;
+
+		show(check(input, 60));
+	}
+
+
+	@Test
+	void testWriteToFile() throws Exception {
+		String input = """
+        void f(string url)
+           image b <- url;
+           image c = getBlue(b);
+           write c -> "blueImage";
+           """;
+
+		String url = "https://upload.wikimedia.org/wikipedia/commons/9/92/Albert_and_Alberta.jpg";
+		BufferedImage inputImage = FileURLIO.readImage(url);
+		int w = inputImage.getWidth();
+		int h = inputImage.getHeight();
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		for (int x = 0; x < w; x++)
+			for (int y = 0; y < h; y++) {
+				ColorTuple pixel = ColorTuple.unpack(inputImage.getRGB(x, y));
+				int newPackedPixel = (new ColorTuple(0,0,pixel.blue)).pack();
+				refImage.setRGB(x, y, newPackedPixel);
+			}
+
+		Object[] params = {url};
+		exec(input, params);
+		ConsoleIO.displayReferenceImageOnScreen(refImage);
+		File file = new File("blueImage.jpeg");
+		assertEquals(true, file.exists());
+	}
+
+	@Test
+	void testWriteTextToFile() throws Exception {
+		String input = """
+        void f()
+           string message = "Hello World!";
+           write message -> "textFile";
+           """;
+
+
+
+		exec(input);
+//writeValue writes to file with no extension
+		File file = new File("textFile");
+		assertEquals(true, file.exists());
+
+//readValueFromFile returns a string
+		Object File = FileURLIO.readValueFromFile("textFile");
+		assertEquals("Hello World!", File);
+
 	}
 
 
