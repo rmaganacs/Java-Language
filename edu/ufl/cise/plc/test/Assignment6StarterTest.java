@@ -528,9 +528,6 @@ class Assignment6StarterTest {
            string message = "Hello World!";
            write message -> "textFile";
            """;
-
-
-
 		exec(input);
 //writeValue writes to file with no extension
 		File file = new File("textFile");
@@ -541,6 +538,216 @@ class Assignment6StarterTest {
 		assertEquals("Hello World!", File);
 
 	}
+
+	@Test
+	void testDeclaringOneValueToImage() throws Exception{
+		String input = """
+      image f()
+            image[500, 500] b = 100;
+            ^b;
+      """;
+		int w = 500;
+		int h = 500;
+		int size = w*h;
+		BufferedImage refImage = new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
+		int[] rgbArray = new int[size];
+		Color hundred = new Color(100, 100, 100);
+		Arrays.fill(rgbArray, hundred.getRGB());
+		refImage.setRGB(0, 0, w,h, rgbArray, 0, w);
+		show(check(input, refImage));
+	}
+
+	@Test
+	void testBinaryImageImageOp() throws Exception {
+		String input = """
+				image f()
+				    image[300, 300] a = RED;
+				        	image[300, 300] b = BLUE;
+				        	image c = a+b;
+				        	^c;
+				""";
+
+		int w = 300;
+		int h = 300;
+		int size = w * h;
+		BufferedImage image1 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		BufferedImage image2 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+
+		int red = Color.RED.getRGB();
+		int blue = Color.BLUE.getRGB();
+		int[] rgbRedArray = new int[size];
+		int[] rgbBlueArray = new int[size];
+		Arrays.fill(rgbRedArray, red);
+		Arrays.fill(rgbBlueArray, blue);
+		image1.setRGB(0, 0, w, h, rgbRedArray, 0, w);
+		image2.setRGB(0, 0, w, h, rgbBlueArray, 0, w);
+
+		BufferedImage refImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		for (int x = 0; x < w; x++)
+			for (int y = 0; y < h; y++) {
+				ColorTuple pixel1 = ColorTuple.unpack(image1.getRGB(x, y));
+				ColorTuple pixel2 = ColorTuple.unpack(image2.getRGB(x, y));
+				int newPackedPixel = (new ColorTuple(pixel1.red + pixel2.red, pixel1.green + pixel2.green,
+						pixel1.blue + pixel2.blue)).pack();
+				refImage.setRGB(x, y, newPackedPixel);
+			}
+		ConsoleIO.displayReferenceImageOnScreen(image1);
+		ConsoleIO.displayReferenceImageOnScreen(image2);
+
+		show(check(input, null, refImage));
+	}
+	@Test
+	void testImageEqualsTrue() throws Exception {
+		String input = """
+				boolean f()
+				    image[300, 300] a = RED;
+				      	image[300, 300] b = RED;
+				      	^ a == b;
+				""";
+
+		int w = 300;
+		int h = 300;
+		int size = w * h;
+		BufferedImage image1 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		BufferedImage image2 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+
+		int red = Color.RED.getRGB();
+		int[] rgbRedArray = new int[size];
+		Arrays.fill(rgbRedArray, red);
+		image1.setRGB(0, 0, w, h, rgbRedArray, 0, w);
+		image2.setRGB(0, 0, w, h, rgbRedArray, 0, w);
+
+		ConsoleIO.displayReferenceImageOnScreen(image1);
+		ConsoleIO.displayReferenceImageOnScreen(image2);
+
+		check(input, true);
+	}
+
+	@Test
+	void testImageEqualsFalse() throws Exception {
+		String input = """
+				boolean f()
+				    image[300, 300] a = RED;
+				      	image[300, 300] b = BLUE;
+				      	^ a == b;
+				""";
+
+		int w = 300;
+		int h = 300;
+		int size = w * h;
+		BufferedImage image1 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		BufferedImage image2 = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+
+		int red = Color.RED.getRGB();
+		int blue = Color.BLUE.getRGB();
+		int[] rgbRedArray = new int[size];
+		int[] rgbBlueArray = new int[size];
+		Arrays.fill(rgbRedArray, red);
+		Arrays.fill(rgbBlueArray, blue);
+		image1.setRGB(0, 0, w, h, rgbRedArray, 0, w);
+		image2.setRGB(0, 0, w, h, rgbBlueArray, 0, w);
+
+		ConsoleIO.displayReferenceImageOnScreen(image1);
+		ConsoleIO.displayReferenceImageOnScreen(image2);
+
+		check(input, false);
+
+	}
+
+	@Test
+		// must import java.awt.image.BufferedImage from parameter
+	void importTest1() throws Exception {
+		String input = """
+				void a(image b)
+				      int c = 0;
+				      """;
+		String url = "https://upload.wikimedia.org/wikipedia/commons/9/92/Albert_and_Alberta.jpg";
+		BufferedImage inputImage = FileURLIO.readImage(url);
+		Object[] params = {inputImage};
+		exec(input, params);
+	}
+
+
+
+	@Test
+		// must import edu.ufl.cise.plc.runtime.ColorTuple from parameter
+	void importTest2() throws Exception {
+		String input = """
+				void a(color b)
+				      int c = 0;
+				      """;
+		ColorTuple inputColor = new ColorTuple(0);
+		Object[] params = {inputColor};
+		exec(input, params);
+	}
+
+
+
+
+
+
+
+
+	@Test
+		// must import edu.ufl.cise.plc.runtime.ColorTuple from first declaration
+		// must import java.awt.Color from first declaration
+		// must import edu.ufl.cise.plc.runtime.ImageOps if using the binaryImageScalarOp function
+
+	void importTest3() throws Exception {
+		String input = """
+				void a()
+				      color b = BLUE;
+				      b = b * 3;
+				      """;
+		exec(input);
+	}
+
+
+	@Test
+		// must import java.awt.image.BufferedImage for image declaration
+		// must import edu.ufl.cise.plc.runtime.ImageOps if using the setColor function when initializing image
+		// must import edu.ufl.cise.plc.runtime.ColorTuple when converting colorfloat to color
+		// must import edu.ufl.cise.plc.runtime.ColorTupleFloat for the expression assigned to image
+		// must import edu.ufl.cise.plc.runtime.ConsoleIO for write assignment
+	void importTest4() throws Exception {
+		String input = """
+				void a()
+					image[200,200] b = <<0.0, 255.0, 0.0>>;
+					write b -> console;
+				""";
+		exec(input);
+		//pauseImageDisplay();
+	}
+
+
+
+	@Test
+		// first program:
+		// must import edu.ufl.cise.plc.runtime.ColorTuple for first declaration
+		// must import edu.ufl.cise.plc.runtime.FileURLIO for write assignment
+
+		// second program:
+		// must import edu.ufl.cise.plc.runtime.ColorTuple for first declaration
+		// must import import edu.ufl.cise.plc.runtime.FileURLIO for read assignment
+		// must import edu.ufl.cise.plc.runtime.ConsoleIO for write assignment
+	void importTest5() throws Exception {
+		String input1 = """
+				void a()
+					color b = <<100,100,100>>;
+					write b -> "colorFile";
+				""";
+		File file = new File("colorFile");
+		assertEquals(true, file.exists());
+		exec(input1);
+		String input2 = """
+				void c()
+					color d <- "colorFile";
+					int e = getRed d;
+					write e -> console;
+				""";
+		exec(input2);
+	}
+
 
 
 
