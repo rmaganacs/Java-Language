@@ -370,9 +370,14 @@ public class CodeGenVisitor implements ASTVisitor {
             imports.add("import edu.ufl.cise.plc.runtime.ConsoleIO;");
             imports.add("import edu.ufl.cise.plc.runtime.FileURLIO;");
             if(writeStatement.getSource().getType() == Types.Type.IMAGE){
-                sb.append("FileURLIO.writeImage(").append(sourceName).comma().space().append(fileName);
+                sb.append("FileURLIO.writeImage(");
+                writeStatement.getSource().visit(this, sb);
+                sb.comma().space().append(fileName);
+
             }else{
-                sb.append("FileURLIO.writeValue(").append(sourceName).comma().space().append(fileName);
+                sb.append("FileURLIO.writeValue(");
+                writeStatement.getSource().visit(this, sb);
+                sb.comma().space().append(fileName);
             }
         }else{
             sb.append("ConsoleIO.console.println(");
@@ -400,7 +405,6 @@ public class CodeGenVisitor implements ASTVisitor {
             }
             sb.rparen().semi().newline();
             sb.append("FileURLIO.closeFiles();");
-            //TODO maybe add closFiles()
         }
         else if(expr.getType() == Types.Type.CONSOLE){
             sb.append(name);
@@ -410,13 +414,11 @@ public class CodeGenVisitor implements ASTVisitor {
         }else if(expr.getType() == Types.Type.COLOR){
             sb.append("(ColorTuple)FileURLIO.readValueFromFile(").append(readStatement.getName());
         }
-        //TODO ADD MORE TYPES MAYBE IDK WE'LL SEE...
         return sb;
     }
 
     @Override
     public Object visitProgram(Program program, Object arg) throws Exception {
-        //TODO fix imports
         imports.add("import edu.ufl.cise.plc.runtime.*;");
         CodeGenStringBuilder sb =  new CodeGenStringBuilder();
         List<NameDef> params = program.getParams();
@@ -591,7 +593,6 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitUnaryExprPostfix(UnaryExprPostfix unaryExprPostfix, Object arg) throws Exception {
-        //TODO
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         String exprName = unaryExprPostfix.getExpr().getText();
         String x = unaryExprPostfix.getSelector().getX().getText();

@@ -781,28 +781,5 @@ class Assignment6StarterTest {
 
 
 
-	@Test
-		// first program should work
-		// second program must give a ClassCastException or a TypeCheckException (depending on how your TypeCheckVisitor works)
-	void unsuccessful3() throws Exception{
-		String input1 = """
-				void a()
-					color b = <<100,100,100>>;
-					write (b / 1.0) -> "colorFloatFile";
-				""";
-		exec(input1);
-		File file = new File("colorFloatFile");
-		assertEquals(true, file.exists());
-		String input2 = """
-				void c()
-					color d <- "colorFloatFile";
-				""";
-		Exception e = assertThrows(Exception.class, () -> {
-			exec(input2);
-		});
-	}
-
-
-
 
 }
