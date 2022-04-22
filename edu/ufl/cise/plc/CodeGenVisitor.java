@@ -413,6 +413,8 @@ public class CodeGenVisitor implements ASTVisitor {
             sb.semi().newline();
         }else if(expr.getType() == Types.Type.COLOR){
             sb.append("(ColorTuple)FileURLIO.readValueFromFile(").append(readStatement.getName());
+        }else if(expr.getType() == Types.Type.COLORFLOAT){
+            sb.append("(ColorTupleFloat)FileURLIO.readValueFromFile(").append(readStatement.getName());
         }
         return sb;
     }
@@ -581,6 +583,10 @@ public class CodeGenVisitor implements ASTVisitor {
                 declaration.getNameDef().visit(this, sb);
                 sb.append(" = ");
                 sb.append("(ColorTuple)FileURLIO.readValueFromFile(").append(declaration.getExpr().getText()).rparen();
+            }else if(declaration.getNameDef().getType() == Types.Type.COLORFLOAT){
+                declaration.getNameDef().visit(this, sb);
+                sb.append(" = ");
+                sb.append("(ColorTupleFloat)FileURLIO.readValueFromFile(").append(declaration.getExpr().getText()).rparen();
             }else{
                 declaration.getNameDef().visit(this, sb);
                 sb.append(" = ");
