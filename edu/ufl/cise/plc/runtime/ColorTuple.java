@@ -36,7 +36,7 @@ public class ColorTuple implements Serializable {
 	 * This constructor takes a single int value and creates a ColorTuple object
 	 * with the given value in all three color components.
 	 * 
-	 * @see unpack to create a ColorTuple from an int interpreted as a packed pixel.
+	// * @see unpack to create a ColorTuple from an int interpreted as a packed pixel.
 	 * 
 	 * @param value
 	 */
