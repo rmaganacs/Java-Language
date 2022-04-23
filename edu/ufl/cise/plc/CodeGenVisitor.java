@@ -139,12 +139,24 @@ public class CodeGenVisitor implements ASTVisitor {
             sb.append("!").space();
             unaryExpression.getExpr().visit(this, sb);
             sb.space().rparen();
-        }else if(unaryExpression.getOp().getKind() == IToken.Kind.COLOR_OP)
-        {
+        }else if(unaryExpression.getOp().getKind() == IToken.Kind.COLOR_OP) {
             String value = unaryExpression.getExpr().getText();
             String colorMethod = unaryExpression.getOp().getText();
             if(unaryExpression.getExpr().getType() == Types.Type.INT){
-                sb.append("ColorTuple.unpack(").append(value).rparen();
+                if(Objects.equals(colorMethod, "getRed")){
+                    sb.append("ColorTuple.getRed(");
+                    unaryExpression.getExpr().visit(this, sb);
+                    sb.rparen();
+                }else if(Objects.equals(colorMethod, "getGreen")){
+                    sb.append("ColorTuple.getGreen(");
+                    unaryExpression.getExpr().visit(this, sb);
+                    sb.rparen();
+                }else if(Objects.equals(colorMethod, "getBlue")){
+                    sb.append("ColorTuple.getBlue(");
+                    unaryExpression.getExpr().visit(this, sb);
+                    sb.rparen();
+                }
+                sb.rparen();
             }else if(unaryExpression.getExpr().getType() == Types.Type.COLOR){
                 if(Objects.equals(colorMethod, "getRed")){
                     sb.append("ColorTuple.getRed(").append(value).rparen().space().rparen();
@@ -161,6 +173,12 @@ public class CodeGenVisitor implements ASTVisitor {
                 }else if(Objects.equals(colorMethod, "getBlue")){
                     sb.append("ImageOps.extractBlue(").append(value).rparen().space().rparen();
                 }
+            }
+        }else if(unaryExpression.getOp().getKind() == IToken.Kind.IMAGE_OP){
+            if(Objects.equals(unaryExpression.getOp().getText(), "getWidth")){
+                sb.append(unaryExpression.getExpr().getText()).append(".getWidth() )");
+            }else{
+                sb.append(unaryExpression.getExpr().getText()).append(".getHeight() )");
             }
         }
         return sb;
@@ -201,16 +219,29 @@ public class CodeGenVisitor implements ASTVisitor {
                 }else{
                     sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
                 }
-                sb.append(left).comma().space().append(right).rparen();
+                binaryExpr.getLeft().visit(this, sb);
+                sb.comma().space();
+                binaryExpr.getRight().visit(this, sb);
+                sb.rparen();
             }else if(binaryExpr.getRight().getType() == Types.Type.COLORFLOAT){
                 sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
                 sb.append(left).comma().space().append(right).rparen();
             }else if(binaryExpr.getRight().getType() == Types.Type.INT){
                 sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
-                sb.append(left).comma().space().append("new ColorTuple(").append(binaryExpr.getRight().getText()).rparen().rparen();
+                binaryExpr.getLeft().visit(this, sb);
+                sb.comma().space();
+                if(binaryExpr.getRight().getType() == Types.Type.INT){
+                    sb.append("new ColorTuple(").append(binaryExpr.getRight().getText()).rparen();
+                }else{
+                    binaryExpr.getRight().visit(this, sb);
+                }
+                sb.rparen();
             }else if(binaryExpr.getRight().getType() == Types.Type.FLOAT){
                 sb.append("ImageOps.binaryTupleOp(ImageOps.OP.").append(operator).comma().space();
-                sb.append(left).comma().space().append("new ColorTupleFloat(").append(binaryExpr.getRight().getText()).rparen().rparen();
+                binaryExpr.getLeft().visit(this, sb);
+                sb.comma().space();
+                binaryExpr.getRight().visit(this, sb);
+                sb.rparen();
             }
             //TODO LAST CONDITION IN BINARY
         }else if(binaryExpr.getLeft().getCoerceTo() == Types.Type.COLOR && binaryExpr.getLeft().getType() == Types.Type.INT){
@@ -274,9 +305,9 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitDimension(Dimension dimension, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        String width = dimension.getWidth().getText();
-        String height = dimension.getHeight().getText();
-        sb.append(width).comma().space().append(height);
+        dimension.getWidth().visit(this, sb);
+        sb.comma().space();
+        dimension.getHeight().visit(this, sb);
         return sb;
     }
 
@@ -304,8 +335,11 @@ public class CodeGenVisitor implements ASTVisitor {
                 if(assignmentStatement.getTargetDec().getDim() != null){
                     String x = assignmentStatement.getTargetDec().getDim().getWidth().getText();
                     String y = assignmentStatement.getTargetDec().getDim().getHeight().getText();
-                    sb.append(name).append(" = ").append("ImageOps.resize(").append(exprName);
-                    sb.comma().space().append(x).comma().space().append(y).rparen();
+                    sb.append(name).append(" = ").append("ImageOps.resize(").append(exprName).comma().space();
+                    assignmentStatement.getTargetDec().getDim().getWidth().visit(this, sb);
+                    sb.comma().space();
+                    assignmentStatement.getTargetDec().getDim().getHeight().visit(this, sb);
+                    sb.rparen();
                 }else if(assignmentStatement.getTargetDec().getDim() == null){
                     if(assignmentStatement.getExpr() instanceof IdentExpr){
                         sb.append(name).append(" = ").append("ImageOps.clone(").append(exprName).rparen();
@@ -338,7 +372,9 @@ public class CodeGenVisitor implements ASTVisitor {
                     }
                 }
                 if(expr.getType() == Types.Type.INT){
-                    sb.append("new ColorTuple(").append(exprName).rparen();
+                    sb.append("new ColorTuple(");
+                    assignmentStatement.getExpr().visit(this, sb);
+                    sb.rparen();
                 }else{
                     assignmentStatement.getExpr().visit(this, sb);
                 }
@@ -393,28 +429,44 @@ public class CodeGenVisitor implements ASTVisitor {
         String name = readStatement.getName();
         Expr expr = readStatement.getSource();
 
-        if(expr.getType() == Types.Type.IMAGE) {
+        if(readStatement.getTargetDec().getType() == Types.Type.IMAGE) {
             imports.add("import edu.ufl.cise.plc.runtime.FileURLIO;");
+            sb.append(name);
+            sb.append(" = ");
             sb.append("FileURLIO.readImage(");
-            if(readStatement.getSelector() != null){
+            if(readStatement.getTargetDec().getDim() != null){
                 readStatement.getSource().visit(this, sb);
                 sb.comma().space();
-                readStatement.getSelector().visit(this, sb);
-            }else if(readStatement.getSelector() == null){
+                readStatement.getTargetDec().getDim().visit(this, sb);
+            }else if(readStatement.getTargetDec().getDim() == null){
                 readStatement.getSource().visit(this, sb);
             }
             sb.rparen().semi().newline();
-            sb.append("FileURLIO.closeFiles();");
+            //sb.append("FileURLIO.closeFiles();");
         }
-        else if(expr.getType() == Types.Type.CONSOLE){
+        else if(readStatement.getSource().getType() == Types.Type.CONSOLE){
             sb.append(name);
             sb.append(" = ");
             expr.visit(this, sb);
             sb.semi().newline();
-        }else if(expr.getType() == Types.Type.COLOR){
-            sb.append("(ColorTuple)FileURLIO.readValueFromFile(").append(readStatement.getName());
-        }else if(expr.getType() == Types.Type.COLORFLOAT){
-            sb.append("(ColorTupleFloat)FileURLIO.readValueFromFile(").append(readStatement.getName());
+        }else if(readStatement.getTargetDec().getType() == Types.Type.COLOR){
+            sb.append(name);
+            sb.append(" = ");
+            sb.append("(ColorTuple)FileURLIO.readValueFromFile(").append(expr.getText()).rparen().semi().newline();
+        }else if(readStatement.getTargetDec().getType() == Types.Type.COLORFLOAT){
+            sb.append(name);
+            sb.append(" = ");
+            sb.append("(ColorTupleFloat)FileURLIO.readValueFromFile(").append(expr.getText()).rparen().semi().newline();
+        }else{
+            sb.append(name);
+            sb.append(" = ");
+            String NDType = readStatement.getTargetDec().getType().name();
+            if(NDType.equals("STRING")){
+                sb.lparen().append("String").rparen();
+            }else {
+                sb.lparen().append(NDType.toLowerCase(Locale.ROOT)).rparen();
+            }
+            sb.append("FileURLIO.readValueFromFile(").append(expr.getText()).rparen().semi().newline();
         }
         return sb;
     }
@@ -545,6 +597,10 @@ public class CodeGenVisitor implements ASTVisitor {
                     sb.comma().space();
                     declaration.getExpr().visit(this, sb);
                     sb.rparen();
+                }else if(declaration.getExpr().getType() == Types.Type.IMAGE && declaration.getDim() != null){
+                    sb.append("ImageOps.resize(").append(declaration.getExpr().getText()).comma().space();
+                   declaration.getDim().visit(this, sb);
+                   sb.rparen();
                 }else{
                     declaration.getExpr().visit(this, sb);
                 }
@@ -560,8 +616,12 @@ public class CodeGenVisitor implements ASTVisitor {
             }else{
                 declaration.getNameDef().visit(this, sb);
                 sb.append(" = ");
-                GenTypeConversion(declaration.getExpr().getType(), declaration.getExpr().getCoerceTo(), sb);
-                declaration.getExpr().visit(this, sb);
+                if(declaration.getExpr().getType() == Types.Type.COLOR){
+                    sb.append(declaration.getExpr().getText()).append(".pack()");
+                }else{
+                    GenTypeConversion(declaration.getExpr().getType(), declaration.getExpr().getCoerceTo(), sb);
+                    declaration.getExpr().visit(this, sb);
+                }
             }
         }else if(declaration.getOp().getKind() == IToken.Kind.LARROW){
             if(declaration.getNameDef().getType() == Types.Type.IMAGE){
@@ -587,10 +647,20 @@ public class CodeGenVisitor implements ASTVisitor {
                 declaration.getNameDef().visit(this, sb);
                 sb.append(" = ");
                 sb.append("(ColorTupleFloat)FileURLIO.readValueFromFile(").append(declaration.getExpr().getText()).rparen();
-            }else{
+            }else if(declaration.getExpr().getType() == Types.Type.CONSOLE){
                 declaration.getNameDef().visit(this, sb);
                 sb.append(" = ");
                 declaration.getExpr().visit(this, sb);
+            }else{
+                declaration.getNameDef().visit(this, sb);
+                sb.append(" = ");
+                String NDType = declaration.getNameDef().getType().name();
+                if(NDType.equals("STRING")){
+                    sb.lparen().append("String").rparen();
+                }else {
+                    sb.lparen().append(NDType.toLowerCase(Locale.ROOT)).rparen();
+                }
+                sb.append("FileURLIO.readValueFromFile(").append(declaration.getExpr().getText()).rparen();
             }
         }
         sb.semi().newline();
